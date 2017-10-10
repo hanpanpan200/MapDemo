@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { View, AppRegistry, StyleSheet } from 'react-native'
+import { View, Text, AppRegistry, StyleSheet } from 'react-native'
 import MapView from 'react-native-maps'
 import Geojson from 'react-native-geojson'
 
@@ -11,6 +11,18 @@ const styles = StyleSheet.create({
   },
   map: {
     ...StyleSheet.absoluteFillObject,
+  },
+  focusMyLocationButton: {
+    position: 'absolute',
+    top: 40,
+    right: 0,
+    zIndex: 100,
+  },
+  focusMarkersButton: {
+    position: 'absolute',
+    top: 80,
+    right: 0,
+    zIndex: 100,
   },
 })
 
@@ -131,27 +143,63 @@ const polygon = {
   ]
 }
 
-const markers = [
-  {
-    latitude: 39.150051020365076,
-    longitude: -91.90611177190539,
-  }
-]
 const DEFAULT_PADDING = { top: 40, right: 40, bottom: 40, left: 40 }
 
+const INIT_POSITION = [{
+  latitude: 39.150051020365076,
+  longitude: -91.90611177190539,
+}]
+
 export default class MapDemo extends Component {
-  componentDidMount() {
-    this.map.fitToCoordinates(markers, {
+  constructor(props) {
+    super(props)
+    this.state = {
+      showMyLocation: false,
+    }
+  }
+
+  focus = positions => {
+    this.map.fitToCoordinates(positions, {
       edgePadding: DEFAULT_PADDING,
       animated: true,
-    })    
+    })
+    // Note:
+    // If showMyLocation is true, the map will focus to my location after call the method below
+    this.map.fitToElements(true)
   }
+
+  focusMarkers = () => {
+    this.setState({ showMyLocation: false })
+    this.focus(INIT_POSITION)
+  }
+
+  focusOnMe = () => {
+    navigator.geolocation.getCurrentPosition(
+      ({coords}) => {
+        this.setState({ showMyLocation: true })
+        const pos = {
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+        }
+        // this.setState({ region: getRegionForCoordinates([pos]) })
+        this.focus([pos])
+      },
+      (error) => alert('Error: Are location services on?'),
+      {enableHighAccuracy: true}
+    )
+  }
+
   render() {
     return (
       <View style={styles.container}>
+        <Text style={styles.focusMyLocationButton} onPress={this.focusOnMe}>Focus on me</Text>
+        <Text style={styles.focusMarkersButton} onPress={this.focusMarkers}>Focus markers</Text>
         <MapView
           style={styles.map}
           ref={ref => { this.map = ref }}
+          showsUserLocation={this.state.showMyLocation}
+          showsScale
+          onLayout={this.focusMarkers}
         >
           <Geojson geojson={multiline} strokeColor='red' strokeWidth={5} />
         </MapView>
